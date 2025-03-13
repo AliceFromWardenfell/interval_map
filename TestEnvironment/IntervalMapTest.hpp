@@ -1,9 +1,13 @@
 #pragma once
 
-#include <string>
 #include <utility>
 
+// STL for test cases
+#include <string>
+#include <vector>
+
 #include <gtest/gtest.h>
+
 #include "IntervalMap.hpp"
 
 template <typename T>

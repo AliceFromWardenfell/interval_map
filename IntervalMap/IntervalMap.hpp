@@ -2,23 +2,35 @@
 
 #include <map>
 
+//debug includes
+#include <iostream>
+
 namespace DS
 {
 	template <typename K, typename V>
-	class IntervalMap
+	class IntervalMap // add commented docs on what is expected from K and V
 	{
 		public:
 
-			IntervalMap() = default;
+			IntervalMap() //implement 5 rule
+			:
+				IntervalMap(V{}) // No silent recovery. If K or V fails, we fail too
+			{}
 
-			IntervalMap(V const& value)
-			{
-				m_map.insert(m_map.end(), { std::numeric_limits<K>::lowest(), value });
-			}
+			IntervalMap(const V& defaultValue)
+			:
+				m_map{{std::numeric_limits<K>::lowest(), defaultValue}}
+			{}
 
 		public:
 
-			V const& operator[](K const& key) const { return (--m_map.upper_bound(key))->second; }
+			void insert(const K& left, const K& right, const V& value)
+			{
+				std::cout << "Hello from insert" << std::endl;
+			}
+
+			const V& get(const K& key) const { return (--m_map.upper_bound(key))->second; }
+			const V& operator[](const K& key) const { return (--m_map.upper_bound(key))->second; }
 
 		private:
 
