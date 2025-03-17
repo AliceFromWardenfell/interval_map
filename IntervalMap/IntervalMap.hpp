@@ -32,30 +32,37 @@ namespace DS
 				if (left >= right) return;
 
 				auto itLeft = m_map.lower_bound(left);
-				auto itRight = m_map.lower_bound(right);
+				auto itRight = m_map.upper_bound(right);
 
-				const V& prevRightValue = std::prev(itRight)->second;
+				const V prevRightValue = std::prev(itRight)->second;
 
 				if (itLeft == m_map.begin() || std::prev(itLeft)->second != value)
 				{
-					auto [it, isInserted] = m_map.insert_or_assign(left, value); // fix one test
+					auto [it, isInserted] = m_map.insert_or_assign(left, value);
+					itLeft = ++it;
 				}
 
 				if (prevRightValue != value)
 				{
-					auto [it, isInserted] = m_map.insert_or_assign(right, prevRightValue);
+					auto [it, isInserted] = m_map.insert_or_assign(right, std::move(prevRightValue));
+					itRight = it;
+				}
+				else
+				{
+					itRight--;
 				}
 
-				//if (itLeft->first == left) ++itLeft;
-				//if (itRight->first == left) ++itLeft;
-				m_map.erase(m_map.upper_bound(left), m_map.lower_bound(right)); // get rid of upper bounds?
+				if (itLeft != m_map.end() && m_map.key_comp()(itLeft->first, itRight->first))
+				{
+					m_map.erase(itLeft, itRight);
+				}
 
 				//return result;
 			}
 
 			void printAsIntervals() const
 			{
-				auto itLast = --m_map.end();
+				auto itLast = std::prev(m_map.end());
 				for (auto it = m_map.begin(); it != itLast; ++it)
 				{
 					auto next = std::next(it);
@@ -74,7 +81,7 @@ namespace DS
 			}
 
 			const V& get(const K& key) const { return (--m_map.upper_bound(key))->second; } // is it ok to use --?
-			const V& operator[](const K& key) const { return (--m_map.upper_bound(key))->second; }
+			const V& operator[](const K& key) const { return (--m_map.upper_bound(key))->second; } // check
 
 		private:
 

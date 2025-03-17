@@ -41,8 +41,6 @@ TEST(IntervalMapTest, ExactOverlapInsertion)
 	EXPECT_EQ(iMap[-100], "Overlapped");
 	EXPECT_EQ(iMap[99], "Overlapped");
 	EXPECT_EQ(iMap[100], "Default");
-
-	iMap.printAsIntervals();
 }
 
 // Test overlapping intervals
@@ -129,8 +127,6 @@ TEST(IntervalMapTest, ClearInterval)
 	EXPECT_EQ(iMap[10], "A"); // Cleared interval should return to default
 	EXPECT_EQ(iMap[19], "A"); // Still default
 	EXPECT_EQ(iMap[20], "A"); // Outside original interval
-
-	iMap.printAsIntervals();
 }
 
 // Test assigning interval with same value as default (should have no effect)
@@ -142,4 +138,99 @@ TEST(IntervalMapTest, AssignDefaultValue)
 	EXPECT_EQ(iMap[9], "A");
 	EXPECT_EQ(iMap[10], "A"); // Should be unchanged
 	EXPECT_EQ(iMap[20], "A");
+}
+
+// Test for adjacent intervals: intervals that touch but do not overlap.
+TEST(IntervalMapTest, AdjacentIntervals)
+{
+	DS::IntervalMap<int, std::string> iMap("Default");
+	iMap.insert(10, 20, "A");
+	iMap.insert(20, 30, "B");
+
+	EXPECT_EQ(iMap[9], "Default");   // Before first interval
+	EXPECT_EQ(iMap[10], "A");          // Start of first interval
+	EXPECT_EQ(iMap[19], "A");          // End of first interval
+	EXPECT_EQ(iMap[20], "B");          // Start of second interval
+	EXPECT_EQ(iMap[29], "B");          // End of second interval
+	EXPECT_EQ(iMap[30], "Default");    // After second interval
+}
+
+// Test inserting an interval that covers nearly the entire range of int values.
+// Note: The interval is [min, max) so the key equal to max should return default.
+TEST(IntervalMapTest, FullRangeInterval)
+{
+	DS::IntervalMap<int, std::string> iMap("Default");
+	iMap.insert(std::numeric_limits<int>::min(), std::numeric_limits<int>::max(), "Full");
+
+	EXPECT_EQ(iMap[std::numeric_limits<int>::min()], "Full");
+	EXPECT_EQ(iMap[0], "Full");
+	EXPECT_EQ(iMap[std::numeric_limits<int>::max() - 1], "Full");
+	EXPECT_EQ(iMap[std::numeric_limits<int>::max()], "Default");
+}
+
+// Test overlapping intervals with the same starting boundary.
+TEST(IntervalMapTest, OverlappingSameStart)
+{
+	DS::IntervalMap<int, std::string> iMap("Default");
+	iMap.insert(10, 20, "A");
+	iMap.insert(10, 15, "B");
+
+	EXPECT_EQ(iMap[9], "Default");
+	EXPECT_EQ(iMap[10], "B");  // New interval starts at 10
+	EXPECT_EQ(iMap[14], "B");  // Still within the overwritten part
+	EXPECT_EQ(iMap[15], "A");  // Remainder of the first interval
+	EXPECT_EQ(iMap[19], "A");
+	EXPECT_EQ(iMap[20], "Default");
+}
+
+// Test multiple overlapping intervals inserted sequentially.
+TEST(IntervalMapTest, MultipleOverlappingIntervals)
+{
+	DS::IntervalMap<int, std::string> iMap("Default");
+
+	iMap.insert(10, 30, "A");
+	iMap.insert(20, 40, "B");
+	iMap.insert(25, 35, "C");
+	// Expected segments:
+	// [10,20) : "A"
+	// [20,25) : "B"
+	// [25,35) : "C"
+	// [35,40) : "B"
+	// Else: "Default"
+	EXPECT_EQ(iMap[9], "Default");
+	EXPECT_EQ(iMap[10], "A");
+	EXPECT_EQ(iMap[19], "A");
+	EXPECT_EQ(iMap[20], "B");
+	EXPECT_EQ(iMap[24], "B");
+	EXPECT_EQ(iMap[25], "C");
+	EXPECT_EQ(iMap[34], "C");
+	EXPECT_EQ(iMap[35], "B");
+	EXPECT_EQ(iMap[39], "B");
+	EXPECT_EQ(iMap[40], "Default");
+}
+
+// Test multiple insertions where a subsequent insertion reassigns part of an interval back to the default value.
+TEST(IntervalMapTest, MultipleInsertionsAndReversions)
+{
+	DS::IntervalMap<int, std::string> iMap("Default");
+
+	iMap.insert(10, 20, "A");
+	iMap.insert(15, 25, "B");
+	// Clear a middle segment by reassigning the default value.
+	iMap.insert(12, 18, "Default");
+
+	// Expected segments:
+	// [10,12) : "A"
+	// [12,18) : "Default" (cleared region)
+	// [18,25) : "B"
+	EXPECT_EQ(iMap[9], "Default");
+	EXPECT_EQ(iMap[10], "A");
+	EXPECT_EQ(iMap[11], "A");
+	EXPECT_EQ(iMap[12], "Default");
+	EXPECT_EQ(iMap[14], "Default");
+	EXPECT_EQ(iMap[15], "Default");
+	EXPECT_EQ(iMap[17], "Default");
+	EXPECT_EQ(iMap[18], "B");
+	EXPECT_EQ(iMap[24], "B");
+	EXPECT_EQ(iMap[25], "Default");
 }
