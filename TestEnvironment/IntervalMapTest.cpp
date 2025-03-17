@@ -234,3 +234,349 @@ TEST(IntervalMapTest, MultipleInsertionsAndReversions)
 	EXPECT_EQ(iMap[24], "B");
 	EXPECT_EQ(iMap[25], "Default");
 }
+
+// Test that an IntervalMap with no insertions returns the default value for any key.
+TEST(IntervalMapTest, EmptyMapInitialState)
+{
+	DS::IntervalMap<int, std::string> iMap("Default");
+
+	// Without any insertions, every key should yield the default value.
+	EXPECT_EQ(iMap[-100], "Default");
+	EXPECT_EQ(iMap[0], "Default");
+	EXPECT_EQ(iMap[100], "Default");
+}
+
+// Test inserting into an empty internal map.
+// After the first insertion, the correct segments should be set.
+TEST(IntervalMapTest, InsertIntoEmptyMap)
+{
+	DS::IntervalMap<int, std::string> iMap("Default");
+
+	// m_map is initially empty; inserting an interval should update it.
+	iMap.insert(50, 100, "Custom");
+
+	// Keys outside the inserted interval should still return "Default".
+	EXPECT_EQ(iMap[49], "Default");
+	// Keys within the inserted range should return "Custom".
+	EXPECT_EQ(iMap[50], "Custom");
+	EXPECT_EQ(iMap[75], "Custom");
+	EXPECT_EQ(iMap[99], "Custom");
+	// The key at the end of the interval should revert to "Default".
+	EXPECT_EQ(iMap[100], "Default");
+}
+
+// Test that inserting an interval with the same value as the default into an empty map has no effect.
+TEST(IntervalMapTest, InsertDefaultValueIntoEmptyMap)
+{
+	DS::IntervalMap<int, std::string> iMap("Default");
+
+	// Attempt to insert an interval with the default value.
+	iMap.insert(50, 100, "Default");
+
+	// All keys should still yield the default value.
+	EXPECT_EQ(iMap[49], "Default");
+	EXPECT_EQ(iMap[50], "Default");
+	EXPECT_EQ(iMap[75], "Default");
+	EXPECT_EQ(iMap[99], "Default");
+	EXPECT_EQ(iMap[100], "Default");
+}
+
+// Test inserting into an empty map
+TEST(IntervalMapTest, InsertIntoEmptyMap2)
+{
+	DS::IntervalMap<int, std::string> iMap("Default");
+
+	// Insert the first interval into an empty map
+	iMap.insert(5, 15, "First");
+
+	EXPECT_EQ(iMap[4], "Default");  // Before the interval
+	EXPECT_EQ(iMap[5], "First");    // Start of the interval
+	EXPECT_EQ(iMap[10], "First");   // Inside the interval
+	EXPECT_EQ(iMap[14], "First");   // End of the interval
+	EXPECT_EQ(iMap[15], "Default"); // After the interval
+}
+
+// Test inserting a single interval that covers the entire range of int values into an empty map
+TEST(IntervalMapTest, InsertFullRangeIntoEmptyMap)
+{
+	DS::IntervalMap<int, std::string> iMap("Default");
+
+	// Insert an interval that covers the entire range of int values
+	iMap.insert(std::numeric_limits<int>::min(), std::numeric_limits<int>::max(), "Full");
+
+	EXPECT_EQ(iMap[std::numeric_limits<int>::min()], "Full");       // Start of the interval
+	EXPECT_EQ(iMap[0], "Full");                                    // Inside the interval
+	EXPECT_EQ(iMap[std::numeric_limits<int>::max() - 1], "Full");  // End of the interval
+	EXPECT_EQ(iMap[std::numeric_limits<int>::max()], "Default");   // After the interval
+}
+
+// Test inserting an interval with the same start and end into an empty map
+TEST(IntervalMapTest, InsertEmptyIntervalIntoEmptyMap)
+{
+	DS::IntervalMap<int, std::string> iMap("Default");
+
+	// Insert an empty interval (start == end)
+	iMap.insert(10, 10, "Empty");
+
+	EXPECT_EQ(iMap[9], "Default");  // Before the interval
+	EXPECT_EQ(iMap[10], "Default"); // At the interval (should have no effect)
+	EXPECT_EQ(iMap[11], "Default"); // After the interval
+}
+
+// Test inserting an interval that starts and ends at the same boundary into an empty map
+TEST(IntervalMapTest, InsertSinglePointIntervalIntoEmptyMap)
+{
+	DS::IntervalMap<int, std::string> iMap("Default");
+
+	// Insert an interval that starts and ends at the same boundary
+	iMap.insert(10, 11, "SinglePoint");
+
+	EXPECT_EQ(iMap[9], "Default");       // Before the interval
+	EXPECT_EQ(iMap[10], "SinglePoint");  // Start of the interval
+	EXPECT_EQ(iMap[11], "Default");      // After the interval
+}
+
+// Test inserting an interval that starts at the minimum int value into an empty map
+TEST(IntervalMapTest, InsertMinValueIntervalIntoEmptyMap)
+{
+	DS::IntervalMap<int, std::string> iMap("Default");
+
+	// Insert an interval that starts at the minimum int value
+	iMap.insert(std::numeric_limits<int>::min(), 0, "MinToZero");
+
+	EXPECT_EQ(iMap[std::numeric_limits<int>::min()], "MinToZero");  // Start of the interval
+	EXPECT_EQ(iMap[-1], "MinToZero");                               // Inside the interval
+	EXPECT_EQ(iMap[0], "Default");                                  // After the interval
+}
+
+// Test inserting an interval that ends at the maximum int value into an empty map
+TEST(IntervalMapTest, InsertMaxValueIntervalIntoEmptyMap)
+{
+	DS::IntervalMap<int, std::string> iMap("Default");
+
+	// Insert an interval that ends at the maximum int value
+	iMap.insert(0, std::numeric_limits<int>::max(), "ZeroToMax");
+
+	EXPECT_EQ(iMap[-1], "Default");                                  // Before the interval
+	EXPECT_EQ(iMap[0], "ZeroToMax");                                 // Start of the interval
+	EXPECT_EQ(iMap[std::numeric_limits<int>::max() - 1], "ZeroToMax"); // Inside the interval
+	EXPECT_EQ(iMap[std::numeric_limits<int>::max()], "Default");     // After the interval
+}
+
+// Test inserting an interval that starts and ends at the same boundary (minimum int value) into an empty map
+TEST(IntervalMapTest, InsertMinValueSinglePointIntervalIntoEmptyMap)
+{
+	DS::IntervalMap<int, std::string> iMap("Default");
+
+	// Insert an interval that starts and ends at the minimum int value
+	iMap.insert(std::numeric_limits<int>::min(), std::numeric_limits<int>::min() + 1, "MinPoint");
+
+	EXPECT_EQ(iMap[std::numeric_limits<int>::min() - 1], "Default"); // Before the interval
+	EXPECT_EQ(iMap[std::numeric_limits<int>::min()], "MinPoint");    // Start of the interval
+	EXPECT_EQ(iMap[std::numeric_limits<int>::min() + 1], "Default"); // After the interval
+}
+
+// Test inserting an interval that starts and ends at the same boundary (maximum int value) into an empty map
+TEST(IntervalMapTest, InsertMaxValueSinglePointIntervalIntoEmptyMap)
+{
+	DS::IntervalMap<int, std::string> iMap("Default");
+
+	// Insert an interval that starts and ends at the maximum int value
+	iMap.insert(std::numeric_limits<int>::max() - 1, std::numeric_limits<int>::max(), "MaxPoint");
+
+	EXPECT_EQ(iMap[std::numeric_limits<int>::max() - 2], "Default"); // Before the interval
+	EXPECT_EQ(iMap[std::numeric_limits<int>::max() - 1], "MaxPoint"); // Start of the interval
+	EXPECT_EQ(iMap[std::numeric_limits<int>::max()], "Default");     // After the interval
+}
+
+// Test that a newly constructed IntervalMap is in canonical form.
+TEST(IntervalMapTest, CanonicalFormInitial)
+{
+	DS::IntervalMap<int, std::string> iMap("Default");
+
+	const auto& internalMap = iMap.getMap();
+	// For canonical form, no two consecutive map entries should have the same value.
+	for (auto it = internalMap.begin(); it != internalMap.end(); ++it) {
+		auto next = std::next(it);
+		if (next != internalMap.end()) {
+			EXPECT_NE(it->second, next->second);
+		}
+	}
+}
+
+// Test that after a single insertion into an empty map the canonical form is preserved.
+TEST(IntervalMapTest, CanonicalFormAfterSingleInsertion)
+{
+	DS::IntervalMap<int, std::string> iMap("Default");
+
+	// Insert an interval that modifies a segment.
+	iMap.insert(50, 100, "Custom");
+
+	const auto& internalMap = iMap.getMap();
+	// Check that adjacent entries do not have the same value.
+	for (auto it = internalMap.begin(); it != internalMap.end(); ++it) {
+		auto next = std::next(it);
+		if (next != internalMap.end()) {
+			EXPECT_NE(it->second, next->second);
+		}
+	}
+}
+
+// Test that after multiple overlapping insertions the canonical form is maintained.
+TEST(IntervalMapTest, CanonicalFormAfterMultipleOverlaps)
+{
+	DS::IntervalMap<int, std::string> iMap("A");
+
+	// Create several overlapping intervals that could lead to redundant boundaries if not merged.
+	iMap.printAsLine();
+	iMap.insert(10, 30, "B");
+	iMap.printAsLine();
+	iMap.insert(20, 40, "C");
+	iMap.printAsLine();
+	iMap.insert(25, 35, "D");
+	iMap.printAsLine();
+	iMap.insert(15, 45, "A"); // Reinserting the default over a segment
+	iMap.printAsLine();
+
+	const auto& internalMap = iMap.getMap();
+	// Validate the canonical property: adjacent entries must have different values.
+	for (auto it = internalMap.begin(); it != internalMap.end(); ++it) {
+		auto next = std::next(it);
+		if (next != internalMap.end()) {
+			EXPECT_NE(it->second, next->second);
+		}
+	}
+}
+
+// Test if the map is in canonical form after a single insertion
+TEST(IntervalMapTest, CanonicalFormAfterSingleInsertion2)
+{
+	DS::IntervalMap<int, std::string> iMap("Default");
+
+	iMap.insert(10, 20, "A");
+
+	// Check if the map has only one interval
+	EXPECT_EQ(iMap.m_map.size(), 2); // Only two boundaries: 10 and 20
+	EXPECT_EQ(iMap[9], "Default");
+	EXPECT_EQ(iMap[10], "A");
+	EXPECT_EQ(iMap[19], "A");
+	EXPECT_EQ(iMap[20], "Default");
+}
+
+// Test if the map is in canonical form after inserting adjacent intervals with the same value
+TEST(IntervalMapTest, CanonicalFormAfterAdjacentInsertionsSameValue)
+{
+	DS::IntervalMap<int, std::string> iMap("Default");
+
+	iMap.insert(10, 20, "A");
+	iMap.insert(20, 30, "A"); // Adjacent interval with the same value
+
+	// Check if the intervals are merged into one
+	EXPECT_EQ(iMap.m_map.size(), 2); // Only two boundaries: 10 and 30
+	EXPECT_EQ(iMap[9], "Default");
+	EXPECT_EQ(iMap[10], "A");
+	EXPECT_EQ(iMap[29], "A");
+	EXPECT_EQ(iMap[30], "Default");
+}
+
+// Test if the map is in canonical form after inserting overlapping intervals with the same value
+TEST(IntervalMapTest, CanonicalFormAfterOverlappingInsertionsSameValue)
+{
+	DS::IntervalMap<int, std::string> iMap("Default");
+
+	iMap.insert(10, 20, "A");
+	iMap.insert(15, 25, "A"); // Overlapping interval with the same value
+
+	// Check if the intervals are merged into one
+	EXPECT_EQ(iMap.m_map.size(), 2); // Only two boundaries: 10 and 25
+	EXPECT_EQ(iMap[9], "Default");
+	EXPECT_EQ(iMap[10], "A");
+	EXPECT_EQ(iMap[24], "A");
+	EXPECT_EQ(iMap[25], "Default");
+}
+
+// Test if the map is in canonical form after inserting intervals that revert to the default value
+TEST(IntervalMapTest, CanonicalFormAfterRevertingToDefault)
+{
+	DS::IntervalMap<int, std::string> iMap("Default");
+
+	iMap.insert(10, 20, "A");
+	iMap.insert(15, 25, "Default"); // Revert part of the interval to default
+
+	// Check if the map is in canonical form
+	EXPECT_EQ(iMap.m_map.size(), 2); // Only two boundaries: 10 and 15
+	EXPECT_EQ(iMap[9], "Default");
+	EXPECT_EQ(iMap[10], "A");
+	EXPECT_EQ(iMap[14], "A");
+	EXPECT_EQ(iMap[15], "Default");
+	EXPECT_EQ(iMap[25], "Default");
+}
+
+// Test if the map is in canonical form after inserting an interval that spans multiple existing intervals
+TEST(IntervalMapTest, CanonicalFormAfterSpanningInsertion)
+{
+	DS::IntervalMap<int, std::string> iMap("Default");
+
+	iMap.insert(10, 20, "A");
+	iMap.insert(30, 40, "B");
+	iMap.insert(5, 35, "C"); // Spanning interval
+
+	// Check if the map is in canonical form
+	EXPECT_EQ(iMap.m_map.size(), 3); // Boundaries: 5, 35, 40
+	EXPECT_EQ(iMap[4], "Default");
+	EXPECT_EQ(iMap[5], "C");
+	EXPECT_EQ(iMap[34], "C");
+	EXPECT_EQ(iMap[35], "B");
+	EXPECT_EQ(iMap[39], "B");
+	EXPECT_EQ(iMap[40], "Default");
+}
+
+// Test if the map is in canonical form after inserting an interval that covers the entire range
+TEST(IntervalMapTest, CanonicalFormAfterFullRangeInsertion)
+{
+	DS::IntervalMap<int, std::string> iMap("Default");
+
+	iMap.insert(std::numeric_limits<int>::min(), std::numeric_limits<int>::max(), "Full");
+
+	// Check if the map is in canonical form
+	EXPECT_EQ(iMap.m_map.size(), 2); // Only two boundaries: min and max
+	EXPECT_EQ(iMap[std::numeric_limits<int>::min()], "Full");
+	EXPECT_EQ(iMap[0], "Full");
+	EXPECT_EQ(iMap[std::numeric_limits<int>::max() - 1], "Full");
+	EXPECT_EQ(iMap[std::numeric_limits<int>::max()], "Default");
+}
+
+// Test if the map is in canonical form after inserting an empty interval
+TEST(IntervalMapTest, CanonicalFormAfterEmptyIntervalInsertion)
+{
+	DS::IntervalMap<int, std::string> iMap("Default");
+
+	iMap.insert(10, 10, "A"); // Empty interval
+
+	// Check if the map is in canonical form
+	//EXPECT_EQ(iMap.m_map.size(), 1); // Only the default value exists
+	EXPECT_EQ(iMap[9], "Default");
+	EXPECT_EQ(iMap[10], "Default");
+	EXPECT_EQ(iMap[11], "Default");
+}
+
+// Test if the map is in canonical form after inserting multiple intervals and reverting some to default
+TEST(IntervalMapTest, CanonicalFormAfterMultipleInsertionsAndRevertions)
+{
+	DS::IntervalMap<int, std::string> iMap("Default");
+
+	iMap.insert(10, 20, "A");
+	iMap.insert(15, 25, "B");
+	iMap.insert(12, 18, "Default"); // Revert part of the interval to default
+
+	// Check if the map is in canonical form
+	EXPECT_EQ(iMap.m_map.size(), 4); // Boundaries: 10, 12, 18, 25
+	EXPECT_EQ(iMap[9], "Default");
+	EXPECT_EQ(iMap[10], "A");
+	EXPECT_EQ(iMap[11], "A");
+	EXPECT_EQ(iMap[12], "Default");
+	EXPECT_EQ(iMap[17], "Default");
+	EXPECT_EQ(iMap[18], "B");
+	EXPECT_EQ(iMap[24], "B");
+	EXPECT_EQ(iMap[25], "Default");
+}

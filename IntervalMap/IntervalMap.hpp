@@ -33,27 +33,31 @@ namespace DS
 				auto itBegin = m_map.lower_bound(keyBegin);
 				auto itEnd = m_map.upper_bound(keyEnd);
 
-				// Don't like it...
-				V prevEndVal = itEnd != m_map.end() ? std::prev(itEnd)->second : m_valBegin;
-				const bool isSameValAsPrevEnd = prevEndVal == val;
+				// Saving right overlaping value before map modifying (don't like it btw...)
+				V prevEndVal = (itEnd != m_map.end())
+					? std::prev(itEnd)->second
+					: m_valBegin;
 
-				if (itBegin == m_map.begin() || !(std::prev(itBegin)->second == val))
+				const bool isSameValAsPrevEnd = (val == prevEndVal);
+				const bool isSameValAsPrevBegin = (m_map.empty() || itBegin == m_map.begin())
+					? val == m_valBegin
+					: val == std::prev(itBegin)->second;
+
+				// Left overlap handling
+				if (!isSameValAsPrevBegin)
 				{
-					auto [it, isInserted] = m_map.insert_or_assign(keyBegin, std::forward<V_forward>(val));
-					itBegin = ++it;
+					itBegin = std::next(m_map.insert_or_assign(itBegin, keyBegin, std::forward<V_forward>(val)));
 				}
 
+				// Right overlap handling
 				if (!isSameValAsPrevEnd)
 				{
-					auto [it, isInserted] = m_map.insert_or_assign(keyEnd, std::move(prevEndVal));
-					itEnd = it;
-				}
-				else
-				{
-					itEnd--;
+					itEnd = m_map.insert_or_assign(itEnd, keyEnd, std::move(prevEndVal));
 				}
 
-				if (itBegin != m_map.end() && m_map.key_comp()(itBegin->first, itEnd->first))
+				// Internal overlaps handling
+				if (itBegin != m_map.end() &&
+					(itEnd == m_map.end() || m_map.key_comp()(itBegin->first, itEnd->first)))
 				{
 					m_map.erase(itBegin, itEnd);
 				}
@@ -92,9 +96,19 @@ namespace DS
 				}
 			}
 
+			using MapType = std::map<K, V>;
+
+			const MapType& getMap() const
+			{
+				return m_map;
+			}
+
 		private:
 
 			V m_valBegin;
+
+		public:
+
 			std::map<K, V> m_map;
 	};
 }
