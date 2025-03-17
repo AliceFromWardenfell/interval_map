@@ -17,47 +17,46 @@ namespace DS
 				IntervalMap(V{}) // No silent recovery. If K or V fails, we fail too
 			{}
 
-			IntervalMap(const V& defaultValue)
+			template<typename V_forward>
+			IntervalMap(V_forward&& val)
 			:
-				m_map{{std::numeric_limits<K>::lowest(), defaultValue}}
+				m_valBegin(std::forward<V_forward>(val))
 			{}
 
 		public:
 
-			//using iterator = typename std::map<K, V>::iterator;
-
-			void insert(const K& left, const K& right, const V& value)
+			template<typename V_forward>
+			void insert(const K& keyBegin, const K& keyEnd, V_forward&& val)
 			{
-				//std::pair<iterator, iterator> result{m_map.end(), m_map.end()};
-				if (left >= right) return;
+				if (!(keyBegin < keyEnd)) return;
 
-				auto itLeft = m_map.lower_bound(left);
-				auto itRight = m_map.upper_bound(right);
+				auto itBegin = m_map.lower_bound(keyBegin);
+				auto itEnd = m_map.upper_bound(keyEnd);
 
-				const V prevRightValue = std::prev(itRight)->second;
+				// Don't like it...
+				V prevEndVal = itEnd != m_map.end() ? std::prev(itEnd)->second : m_valBegin;
+				const bool isSameValAsPrevEnd = prevEndVal == val;
 
-				if (itLeft == m_map.begin() || std::prev(itLeft)->second != value)
+				if (itBegin == m_map.begin() || !(std::prev(itBegin)->second == val))
 				{
-					auto [it, isInserted] = m_map.insert_or_assign(left, value);
-					itLeft = ++it;
+					auto [it, isInserted] = m_map.insert_or_assign(keyBegin, std::forward<V_forward>(val));
+					itBegin = ++it;
 				}
 
-				if (prevRightValue != value)
+				if (!isSameValAsPrevEnd)
 				{
-					auto [it, isInserted] = m_map.insert_or_assign(right, std::move(prevRightValue));
-					itRight = it;
+					auto [it, isInserted] = m_map.insert_or_assign(keyEnd, std::move(prevEndVal));
+					itEnd = it;
 				}
 				else
 				{
-					itRight--;
+					itEnd--;
 				}
 
-				if (itLeft != m_map.end() && m_map.key_comp()(itLeft->first, itRight->first))
+				if (itBegin != m_map.end() && m_map.key_comp()(itBegin->first, itEnd->first))
 				{
-					m_map.erase(itLeft, itRight);
+					m_map.erase(itBegin, itEnd);
 				}
-
-				//return result;
 			}
 
 			void printAsIntervals() const
@@ -73,18 +72,29 @@ namespace DS
 
 			void printAsLine() const
 			{
-				for (const auto& [key, value] : m_map)
+				for (const auto& [key, val] : m_map)
 				{
-					std::cout << key << " " << value << " ";
+					std::cout << key << " " << val << " ";
 				}
 				std::cout << std::numeric_limits<K>::max() << std::endl;
 			}
 
-			const V& get(const K& key) const { return (--m_map.upper_bound(key))->second; } // is it ok to use --?
-			const V& operator[](const K& key) const { return (--m_map.upper_bound(key))->second; } // check
+			V const& operator[](K const& key) const
+			{
+				auto it = m_map.upper_bound(key);
+				if (it == m_map.begin())
+				{
+					return m_valBegin;
+				}
+				else
+				{
+					return (--it)->second;
+				}
+			}
 
 		private:
 
+			V m_valBegin;
 			std::map<K, V> m_map;
 	};
 }
