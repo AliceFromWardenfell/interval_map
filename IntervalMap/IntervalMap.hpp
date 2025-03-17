@@ -34,7 +34,7 @@ namespace DS
 				auto itEnd = m_map.upper_bound(keyEnd);
 
 				// Saving right overlaping value before map modifying (don't like it btw...)
-				V prevEndVal = (itEnd != m_map.end())
+				V prevEndVal = (itEnd != m_map.end() && itEnd != m_map.begin())
 					? std::prev(itEnd)->second
 					: m_valBegin;
 

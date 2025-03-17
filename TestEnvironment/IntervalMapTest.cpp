@@ -580,3 +580,125 @@ TEST(IntervalMapTest, CanonicalFormAfterMultipleInsertionsAndRevertions)
 	EXPECT_EQ(iMap[24], "B");
 	EXPECT_EQ(iMap[25], "Default");
 }
+
+// -----------------------------------------------------------------------------
+// Test 1: Right Boundary Lookup Issues
+// This test verifies that when inserting an interval whose keyEnd is less than
+// the first boundary in m_map, no invalid iterator is dereferenced.
+// For example, after an interval insertion starting at 5, inserting one with keyEnd < 5
+// should work correctly.
+TEST(IntervalMapTest, RightBoundaryLookup)
+{
+	DS::IntervalMap<int, std::string> iMap("Default");
+
+	// Insert an interval so that m_map gets an entry (at key 5)
+	iMap.insert(5, 10, "A");
+
+	// Now insert an interval with keyEnd less than the first boundary in m_map.
+	// keyEnd = 0 will cause upper_bound(0) to return m_map.begin() (i.e. iterator to key 5).
+	// The test checks that no crash occurs and the values are correct.
+	iMap.insert(-10, 0, "B");
+
+	// Expected outcomes:
+	// Keys less than -10 remain "Default"
+	// Keys in [-10, 0) become "B"
+	// Keys [0, 5) are still "Default" (since the new interval ended at 0)
+	// Keys from 5 onward reflect the earlier insertion
+	EXPECT_EQ(iMap[-11], "Default");
+	EXPECT_EQ(iMap[-10], "B");
+	EXPECT_EQ(iMap[-1], "B");
+	EXPECT_EQ(iMap[0], "Default");
+	EXPECT_EQ(iMap[4], "Default");
+	EXPECT_EQ(iMap[5], "A");
+	EXPECT_EQ(iMap[9], "A");
+	EXPECT_EQ(iMap[10], "Default");
+}
+
+// Test 2: Canonical Representation (No Redundant Boundaries)
+// This test checks that the internal m_map remains canonical after assignments.
+// Specifically, inserting an interval with a value that is already in effect should not
+// add unnecessary boundaries.
+TEST(IntervalMapTest, CanonicalRepresentation)
+{
+	DS::IntervalMap<int, std::string> iMap("Default");
+
+	// Initially, m_map should be empty
+	EXPECT_TRUE(iMap.m_map.empty());
+
+	// Insert an interval that changes the value
+	iMap.insert(10, 20, "Custom");
+	// For a canonical representation, we expect boundaries at 10 and 20 only.
+	EXPECT_EQ(iMap.m_map.size(), 2);
+
+	// Inserting the same interval with the same value should not add new boundaries.
+	iMap.insert(10, 20, "Custom");
+	EXPECT_EQ(iMap.m_map.size(), 2);
+}
+
+// Test 3: Iterator Hint Consistency Efficiency
+// Although we cannot directly verify the use of iterator hints,
+// this test performs several insertions (in non-sorted order) and checks that
+// the overall interval mapping is as expected.
+TEST(IntervalMapTest, IteratorHintsConsistency)
+{
+	DS::IntervalMap<int, std::string> iMap("Default");
+
+	// Insert intervals in an order that challenges internal iterator hints
+	iMap.insert(30, 40, "X");
+	iMap.insert(10, 20, "Y");
+	iMap.insert(20, 30, "Z");
+
+	// Expected intervals:
+	// (,10): "Default"
+	// [10,20): "Y"
+	// [20,30): "Z"
+	// [30,40): "X"
+	// [40,): "Default"
+	EXPECT_EQ(iMap[5], "Default");
+	EXPECT_EQ(iMap[10], "Y");
+	EXPECT_EQ(iMap[19], "Y");
+	EXPECT_EQ(iMap[20], "Z");
+	EXPECT_EQ(iMap[29], "Z");
+	EXPECT_EQ(iMap[30], "X");
+	EXPECT_EQ(iMap[39], "X");
+	EXPECT_EQ(iMap[40], "Default");
+}
+
+// -----------------------------------------------------------------------------
+// Test 4: Off-By-One and Boundary Touching Cases
+// This test verifies that intervals touching at their boundaries are handled
+// correctly without redundant boundaries. It also checks that an insertion that
+// does not change the value is correctly ignored.
+TEST(IntervalMapTest, OffByOneBoundaries)
+{
+	DS::IntervalMap<int, std::string> iMap("Default");
+
+	// Insert two adjacent intervals.
+	iMap.insert(10, 20, "A");
+	iMap.insert(20, 30, "B");
+
+	// Expected:
+	// (,10): "Default"
+	// [10,20): "A"
+	// [20,30): "B"
+	// [30,): "Default"
+	EXPECT_EQ(iMap[9], "Default");
+	EXPECT_EQ(iMap[10], "A");
+	EXPECT_EQ(iMap[19], "A");
+	EXPECT_EQ(iMap[20], "B");
+	EXPECT_EQ(iMap[29], "B");
+	EXPECT_EQ(iMap[30], "Default");
+
+	// Now test inserting an interval that touches an existing boundary with the same value.
+	// For instance, insert an interval [5,15) with "Default" which is the value in effect before key 10.
+	// This should not create a new boundary if handled canonically.
+	iMap.printAsLine();
+	iMap.insert(5, 15, "Default");
+	iMap.printAsLine();
+	// Check that the value from 5 to 10 remains "Default" and from 10 onward is still "A"
+	// (since the new interval did not change the value in its region).
+	EXPECT_EQ(iMap[7], "Default");
+	EXPECT_EQ(iMap[10], "Default");
+	EXPECT_EQ(iMap[14], "Default");
+	EXPECT_EQ(iMap[15], "A");
+}
